@@ -362,6 +362,7 @@ enum class DispatchKey : uint16_t {
   // AutocastCUDA.
   AutocastCUDA,
   AutocastPrivateUse1,
+  AutocastMPS,
 
   // ~~~~~~~~~~~~~~~~~~~~~~~~~~~ WRAPPERS ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ //
   // There are a number of alternative modes which may want to handle before

@@ -212,6 +212,8 @@ class autocast:
             self.fast_dtype = torch.hpu.get_autocast_hpu_dtype()  # type: ignore[attr-defined]
         elif self.device == "xla":
             self.fast_dtype = torch.get_autocast_xla_dtype()  # type: ignore[attr-defined]
+        elif self.device == "mps":
+            self.fast_dtype = torch.get_autocast_mps_dtype()  # type: ignore[attr-defined]
         elif self.device == self.custom_backend_name:
             necessary_funcs = [
                 "is_autocast_enabled",
@@ -315,6 +317,13 @@ class autocast:
                 )
                 warnings.warn(error_message)
                 enabled = False
+        elif self.device == 'mps':
+            supported_dtype = [torch.float16]
+            if self.fast_dtype not in supported_dtype:
+                error_message = 'In MPS autocast, but the target dtype is not supported. Disabling autocast.\n'
+                error_message += 'MPS Autocast only supports dtype of torch.float16 currently.'
+                warnings.warn(error_message)
+                enabled = False
         self._enabled = enabled
 
     def __enter__(self):
@@ -353,6 +362,11 @@ class autocast:
             torch.set_autocast_xla_enabled(self._enabled)  # type: ignore[attr-defined]
             torch.set_autocast_xla_dtype(self.fast_dtype)  # type: ignore[attr-defined]
             torch.autocast_increment_nesting()
+        elif self.device == "mps":
+            self.prev = torch.is_autocast_mps_enabled()  # type: ignore[attr-defined]
+            self.prev_fastdtype = torch.get_autocast_mps_dtype()  # type: ignore[attr-defined]
+            torch.set_autocast_mps_enabled(self._enabled)  # type: ignore[attr-defined]
+            torch.set_autocast_mps_dtype(self.fast_dtype)  # type: ignore[attr-defined]
         elif self.device == self.custom_backend_name:
             self.prev = self.custom_device_mod.is_autocast_enabled()
             self.prev_fastdtype = self.custom_device_mod.get_autocast_dtype()
@@ -397,6 +411,11 @@ class autocast:
                 torch.clear_autocast_cache()
             torch.set_autocast_xla_enabled(self.prev)  # type: ignore[attr-defined]
             torch.set_autocast_xla_dtype(self.prev_fastdtype)  # type: ignore[attr-defined]
+        elif self.device == 'mps':
+            if torch.autocast_decrement_nesting() == 0:
+                torch.clear_autocast_cache()
+            torch.set_autocast_mps_enabled(self.prev)  # type: ignore[attr-defined]
+            torch.set_autocast_mps_dtype(self.prev_fastdtype)  # type: ignore[attr-defined]
         elif self.device == self.custom_backend_name:
             if torch.autocast_decrement_nesting() == 0:
                 torch.clear_autocast_cache()
